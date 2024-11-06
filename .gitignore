@@ -128,3 +128,9 @@ docs/_build/
 *.pub
 deploy/secrets/
 kubeconfig
+
+# Ignore task.txt
+task.txt
+implementation_plan.txt
+explanation.txt
+design_document.txt
