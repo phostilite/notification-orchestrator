@@ -16,6 +16,7 @@ class PreferenceCreate(PreferenceBase):
     user_id: UUID4
 
 class PreferenceUpdate(BaseModel):
+    channel: Optional[str] = None
     enabled: Optional[bool] = None
     quiet_hours_start: Optional[time] = None
     quiet_hours_end: Optional[time] = None

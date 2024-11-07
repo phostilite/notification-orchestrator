@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
 from app.models.user import User
 from app.schemas.user import UserCreate, UserUpdate
+from app.models.user_preference import UserPreference
 from app.core.auth import get_password_hash, verify_password
 from app.core.logging import logger
 
@@ -76,21 +77,39 @@ class UserService:
             return None
 
     @staticmethod
-    async def update_user(
-        db: Session, 
-        user_id: str, 
-        user_update: UserUpdate
-    ) -> Optional[User]:
+    async def update_user(db: Session, user_id: str, user_update: UserUpdate) -> Optional[User]:
         user = db.query(User).filter(User.id == user_id).first()
         if not user:
             return None
 
-        update_data = user_update.model_dump(exclude_unset=True)
+        # Handle basic user fields
+        update_data = user_update.model_dump(exclude={'preferences'}, exclude_unset=True)
         if "password" in update_data:
             update_data["hashed_password"] = get_password_hash(update_data.pop("password"))
 
         for key, value in update_data.items():
             setattr(user, key, value)
+
+        # Handle preferences if provided
+        if user_update.preferences:
+            for pref_update in user_update.preferences:
+                db_preference = db.query(UserPreference).filter(
+                    UserPreference.user_id == user_id,
+                    UserPreference.channel == pref_update.channel
+                ).first()
+
+                if not db_preference:
+                    # Create new preference if doesn't exist
+                    db_preference = UserPreference(
+                        user_id=user_id,
+                        channel=pref_update.channel
+                    )
+                    db.add(db_preference)
+
+                # Update preference fields
+                pref_data = pref_update.model_dump(exclude={'channel'}, exclude_unset=True)
+                for key, value in pref_data.items():
+                    setattr(db_preference, key, value)
 
         db.commit()
         db.refresh(user)

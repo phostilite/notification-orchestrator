@@ -29,7 +29,8 @@ setup(
         
         # Authentication and Security
         "python-jose[cryptography]",
-        "passlib[bcrypt]",
+        "passlib[bcrypt]==1.7.4",
+        "bcrypt==4.0.1",
         "python-multipart",
         "pydantic[email]",
         
