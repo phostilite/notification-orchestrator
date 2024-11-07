@@ -13,8 +13,15 @@ class Settings(BaseSettings):
     REDIS_URL: str
 
     SMS_PROVIDER_API_KEY: str
+    
+    # Twilio Settings
+    TWILIO_ACCOUNT_SID: str
+    TWILIO_AUTH_TOKEN: str 
+    TWILIO_FROM_NUMBER: str
 
     JWT_SECRET_KEY: str
+    JWT_ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 8  # 8 days
 
     # SMTP Configuration
     SMTP_HOST: str = "smtp.gmail.com"

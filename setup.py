@@ -8,6 +8,15 @@ setup(
         # API Framework
         "fastapi",
         "uvicorn",
+
+        # Web Server
+        "aiohttp",
+
+        # CORS
+        "aiosmtplib",
+
+        # SMS Provider
+        "twilio",
         
         # Database and Migrations
         "sqlalchemy",
@@ -22,6 +31,7 @@ setup(
         "python-jose[cryptography]",
         "passlib[bcrypt]",
         "python-multipart",
+        "pydantic[email]",
         
         # Task Queue and Caching
         "redis",
@@ -29,5 +39,9 @@ setup(
         
         # Testing
         "pytest",
+
+        # Logging
+        "loguru",
+        "python-json-logger",
     ],
 )
