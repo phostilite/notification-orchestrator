@@ -3,6 +3,7 @@ from typing import Optional, Dict, Any, List
 from datetime import datetime
 from pydantic import BaseModel, UUID4, Field
 from .base import BaseSchema
+from enum import Enum
 
 class NotificationBase(BaseSchema):
     channel: str = Field(..., description="Notification channel (email, sms, push)")
@@ -31,3 +32,8 @@ class NotificationList(BaseModel):
     total: int
     skip: int
     limit: int
+
+class NotificationChannel(str, Enum):
+    EMAIL = "email"
+    SMS = "sms"
+    PUSH = "push"

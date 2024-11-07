@@ -3,6 +3,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
 from app.core.config import settings
 from app.api.v1.routes import api_router
+from fastapi.responses import JSONResponse
+from contextlib import asynccontextmanager
+import json
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
