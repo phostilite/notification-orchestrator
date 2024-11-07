@@ -1,6 +1,7 @@
-from typing import Optional
+from typing import Optional, List
 from pydantic import BaseModel, EmailStr, UUID4, Field
 from app.schemas.base import BaseSchema
+from app.schemas.preference import PreferenceResponse
 
 class UserBase(BaseSchema):
     email: EmailStr
@@ -19,6 +20,7 @@ class UserUpdate(BaseModel):
 class UserResponse(UserBase):
     id: UUID4
     is_verified: bool
+    preferences: List[PreferenceResponse]
 
 class Token(BaseModel):
     access_token: str
