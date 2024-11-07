@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.db.session import get_db
 from app.models.user import User
+from app.core.logging import logger
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
@@ -38,27 +39,56 @@ async def get_current_user(
     db: Session = Depends(get_db),
     token: str = Depends(oauth2_scheme)
 ) -> User:
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
-    try:
-        payload = jwt.decode(
-            token,
-            settings.JWT_SECRET_KEY,
-            algorithms=[settings.JWT_ALGORITHM]
+    def create_auth_exception(detail: str) -> HTTPException:
+        return HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=detail,
+            headers={"WWW-Authenticate": "Bearer"},
         )
+
+    try:
+        # Handle missing token
+        if not token:
+            raise create_auth_exception("Authentication required. Please provide a valid token")
+
+        # Decode and validate token
+        try:
+            payload = jwt.decode(
+                token,
+                settings.JWT_SECRET_KEY,
+                algorithms=[settings.JWT_ALGORITHM]
+            )
+        except jwt.ExpiredSignatureError:
+            logger.warning("Expired token attempt")
+            raise create_auth_exception("Token has expired. Please login again")
+        except jwt.JWTError:
+            logger.warning("Invalid token format")
+            raise create_auth_exception("Invalid authentication token format")
+
+        # Validate payload contents
         user_id: str = payload.get("sub")
         if user_id is None:
-            raise credentials_exception
-    except JWTError:
-        raise credentials_exception
-        
-    user = db.query(User).filter(User.id == user_id).first()
-    if user is None:
-        raise credentials_exception
-    return user
+            logger.warning("Token missing user ID")
+            raise create_auth_exception("Invalid token: missing user identifier")
+
+        # Check user exists
+        user = db.query(User).filter(User.id == user_id).first()
+        if user is None:
+            logger.warning(f"Token references non-existent user: {user_id}")
+            raise create_auth_exception("User no longer exists or has been deactivated")
+
+        # Check if user is active
+        if not user.is_active:
+            logger.warning(f"Deactivated user attempt: {user_id}")
+            raise create_auth_exception("User account is deactivated")
+
+        return user
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Unexpected authentication error: {str(e)}")
+        raise create_auth_exception("Authentication failed. Please try logging in again")
 
 async def require_admin(current_user: User = Depends(get_current_user)) -> User:
     if not current_user.is_admin:
