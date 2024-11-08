@@ -1,3 +1,5 @@
+# app/api/v1/endpoints/users.py
+from typing import Dict
 from datetime import timedelta
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
@@ -10,10 +12,11 @@ from app.core.auth import get_current_user, create_access_token
 from app.models.user import User
 from app.core.config import settings
 from app.core.logging import logger
+from app.schemas.common import APIResponse
 
 router = APIRouter()
 
-@router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/register", response_model=APIResponse[UserResponse], status_code=status.HTTP_201_CREATED)
 async def register_user(
     *,
     db: Session = Depends(get_db),
@@ -21,43 +24,50 @@ async def register_user(
 ):
     """Register a new user"""
     try:
-        # Validate unique fields before creation
         await UserService.validate_unique_fields(db=db, email=user_in.email, phone=user_in.phone)
         user = await UserService.create_user(db=db, user_create=user_in)
         logger.info(f"User registered successfully: {user.email}")
-        return user
+        return APIResponse(
+            status="success",
+            data=user,
+            message="User registered successfully"
+        )
     except HTTPException as e:
         logger.warning(f"Registration validation failed: {str(e)}")
-        raise e
+        return APIResponse(
+            status="error",
+            data=None,
+            message=str(e.detail)
+        )
     except IntegrityError as e:
         logger.error(f"Database integrity error: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="User with this email or phone already exists"
+        return APIResponse(
+            status="error",
+            data=None,
+            message="User with this email or phone already exists"
         )
     except Exception as e:
         logger.exception(f"Unexpected error during registration: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Internal server error occurred"
+        return APIResponse(
+            status="error",
+            data=None,
+            message="Internal server error occurred"
         )
 
-@router.post("/login", response_model=Token)
+@router.post("/login", response_model=APIResponse[Token])
 async def login(
     db: Session = Depends(get_db),
     form_data: OAuth2PasswordRequestForm = Depends()
 ):
     """Authenticate user and return token"""
     try:
-        # Check for empty credentials
         if not form_data.username or not form_data.password:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Email and password are required",
-                headers={"WWW-Authenticate": "Bearer"},
+            return APIResponse(
+                status="error",
+                data=None,
+                message="Email and password are required"
             )
 
-        # Try to authenticate user
         user = await UserService.authenticate_user(
             db=db,
             email=form_data.username,
@@ -65,10 +75,10 @@ async def login(
         )
         
         if not user:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid email or password",
-                headers={"WWW-Authenticate": "Bearer"},
+            return APIResponse(
+                status="error",
+                data=None,
+                message="Invalid email or password"
             )
         
         access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
@@ -77,34 +87,39 @@ async def login(
             expires_delta=access_token_expires
         )
         logger.info(f"User logged in successfully: {user.email}")
-        return {"access_token": access_token, "token_type": "bearer"}
-        
-    except HTTPException as e:
-        logger.warning(f"Login attempt failed: {str(e.detail)}")
-        raise e
+        return APIResponse(
+            status="success",
+            data={"access_token": access_token, "token_type": "bearer"},
+            message="Login successful"
+        )
     except Exception as e:
         logger.error(f"Login failed: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An error occurred while processing your request",
-            headers={"WWW-Authenticate": "Bearer"},
+        return APIResponse(
+            status="error",
+            data=None,
+            message="An error occurred while processing your request"
         )
 
-@router.get("/me", response_model=UserResponse)
+@router.get("/me", response_model=APIResponse[UserResponse])
 async def get_user_profile(
     current_user: User = Depends(get_current_user)
 ):
     """Get current user profile"""
     try:
-        return current_user
+        return APIResponse(
+            status="success",
+            data=current_user,
+            message="User profile retrieved successfully"
+        )
     except Exception as e:
         logger.error(f"Error retrieving user profile: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Error retrieving user profile"
+        return APIResponse(
+            status="error",
+            data=None,
+            message="Error retrieving user profile"
         )
 
-@router.put("/me", response_model=UserResponse)
+@router.put("/me", response_model=APIResponse[UserResponse])
 async def update_user_profile(
     *,
     db: Session = Depends(get_db),
@@ -113,7 +128,6 @@ async def update_user_profile(
 ):
     """Update current user profile"""
     try:
-        # Validate unique fields if email or phone is being updated
         if user_update.email and user_update.email != current_user.email:
             await UserService.validate_unique_fields(db=db, email=user_update.email)
         if user_update.phone and user_update.phone != current_user.phone:
@@ -125,29 +139,40 @@ async def update_user_profile(
             user_update=user_update
         )
         if not updated_user:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found"
+            return APIResponse(
+                status="error",
+                data=None,
+                message="User not found"
             )
         logger.info(f"User profile updated successfully: {updated_user.email}")
-        return updated_user
+        return APIResponse(
+            status="success",
+            data=updated_user,
+            message="User profile updated successfully"
+        )
     except HTTPException as e:
         logger.warning(f"Profile update validation failed: {str(e)}")
-        raise e
+        return APIResponse(
+            status="error",
+            data=None,
+            message=str(e.detail)
+        )
     except IntegrityError as e:
         logger.error(f"Database integrity error during update: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Email or phone number already in use"
+        return APIResponse(
+            status="error",
+            data=None,
+            message="Email or phone number already in use"
         )
     except Exception as e:
         logger.exception(f"Error updating user profile: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Error updating user profile"
+        return APIResponse(
+            status="error",
+            data=None,
+            message="Error updating user profile"
         )
 
-@router.delete("/me", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/me", response_model=APIResponse[Dict])
 async def delete_user_profile(
     *,
     db: Session = Depends(get_db),
@@ -157,18 +182,21 @@ async def delete_user_profile(
     try:
         deleted = await UserService.delete_user(db=db, user_id=str(current_user.id))
         if not deleted:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found"
+            return APIResponse(
+                status="error",
+                data=None,
+                message="User not found"
             )
         logger.info(f"User account deleted successfully: {current_user.email}")
-        return None
-    except HTTPException as e:
-        logger.warning(f"Account deletion failed: {str(e)}")
-        raise e
+        return APIResponse(
+            status="success",
+            data={"email": current_user.email},
+            message="User account deleted successfully"
+        )
     except Exception as e:
         logger.exception(f"Error deleting user account: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Error deleting user account"
+        return APIResponse(
+            status="error",
+            data=None,
+            message="Error deleting user account"
         )
