@@ -10,6 +10,7 @@ class User(Base):
     full_name = Column(String(100))
     hashed_password = Column(String(255), nullable=False)
     is_verified = Column(Boolean, default=False)
+    is_admin = Column(Boolean, default=False)
     
     # Relationships
     preferences = relationship("UserPreference", back_populates="user", cascade="all, delete-orphan")

@@ -20,6 +20,7 @@ class TemplateUpdate(BaseModel):
     variables: Optional[Dict[str, Any]] = None
     description: Optional[str] = None
     version: Optional[int] = None
+    channel: Optional[str] = None
 
 class TemplateResponse(TemplateBase):
     id: UUID4

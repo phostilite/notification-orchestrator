@@ -1,3 +1,4 @@
+# app/schemas/user.py
 from typing import Optional, List
 from pydantic import BaseModel, EmailStr, UUID4, Field
 from datetime import datetime
@@ -8,6 +9,7 @@ class UserBase(BaseSchema):
     email: EmailStr
     phone: Optional[str] = None  
     full_name: Optional[str] = None
+    is_admin: Optional[bool] = False  
 
 class UserCreate(UserBase):
     password: str = Field(..., min_length=8)
@@ -17,7 +19,8 @@ class UserUpdate(BaseModel):
     phone: Optional[str] = None
     full_name: Optional[str] = None
     password: Optional[str] = None
-    preferences: Optional[List[PreferenceUpdate]] = None  
+    is_admin: Optional[bool] = None  
+    preferences: Optional[List[PreferenceUpdate]] = None
 
 class UserResponse(UserBase):
     id: UUID4

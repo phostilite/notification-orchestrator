@@ -16,6 +16,14 @@ class TemplateService:
     @staticmethod
     async def get_templates(db: Session):
         return db.query(NotificationTemplate).all()
+    
+    @staticmethod
+    async def get_template_by_name(db: Session, name: str):
+        return db.query(NotificationTemplate).filter(NotificationTemplate.name == name).first()
+    
+    @staticmethod
+    async def get_template(db: Session, template_id: str):
+        return db.query(NotificationTemplate).filter(NotificationTemplate.id == template_id).first()
 
     @staticmethod
     async def update_template(db: Session, template_id: str, template_update: TemplateUpdate):

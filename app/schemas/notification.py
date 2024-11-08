@@ -34,6 +34,15 @@ class NotificationList(BaseModel):
     limit: int
 
 class NotificationChannel(str, Enum):
+    """Supported notification channels"""
     EMAIL = "email"
-    SMS = "sms"
+    SMS = "sms" 
     PUSH = "push"
+    
+    @classmethod
+    def list(cls):
+        """Get list of all channel values"""
+        return list(map(lambda c: c.value, cls))
+
+    def __str__(self):
+        return self.value

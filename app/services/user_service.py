@@ -45,7 +45,8 @@ class UserService:
             email=user_create.email,
             phone=user_create.phone,
             full_name=user_create.full_name,
-            hashed_password=get_password_hash(user_create.password)
+            hashed_password=get_password_hash(user_create.password),
+            is_admin=user_create.is_admin
         )
         db.add(user)
         db.commit()
@@ -86,6 +87,13 @@ class UserService:
         update_data = user_update.model_dump(exclude={'preferences'}, exclude_unset=True)
         if "password" in update_data:
             update_data["hashed_password"] = get_password_hash(update_data.pop("password"))
+
+        # Only allow admin updates from admin users
+        if "is_admin" in update_data and not user.is_admin:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Cannot modify admin status"
+            )
 
         for key, value in update_data.items():
             setattr(user, key, value)
