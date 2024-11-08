@@ -7,7 +7,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.services.user_service import UserService
-from app.schemas.user import UserCreate, UserUpdate, UserResponse, Token
+from app.schemas.user import UserCreate, UserUpdate, UserResponse, Token, UserWithToken
 from app.core.auth import get_current_user, create_access_token
 from app.models.user import User
 from app.core.config import settings
@@ -16,7 +16,7 @@ from app.schemas.common import APIResponse
 
 router = APIRouter()
 
-@router.post("/register", response_model=APIResponse[UserResponse], status_code=status.HTTP_201_CREATED)
+@router.post("/register", response_model=APIResponse[UserWithToken], status_code=status.HTTP_201_CREATED)
 async def register_user(
     *,
     db: Session = Depends(get_db),
@@ -26,10 +26,39 @@ async def register_user(
     try:
         await UserService.validate_unique_fields(db=db, email=user_in.email, phone=user_in.phone)
         user = await UserService.create_user(db=db, user_create=user_in)
+        
+        # Generate access token for the new user
+        access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+        access_token = create_access_token(
+            data={"sub": str(user.id)},
+            expires_delta=access_token_expires
+        )
+
+        # Convert SQLAlchemy model to Pydantic model
+        user_response = UserResponse(
+            id=user.id,
+            email=user.email,
+            phone=user.phone,
+            full_name=user.full_name,
+            is_verified=user.is_verified,
+            preferences=user.preferences,
+            created_at=user.created_at,
+            updated_at=user.updated_at
+        )
+        
+        # Create response with user and token
+        response_data = UserWithToken(
+            user=user_response,
+            token=Token(
+                access_token=access_token,
+                token_type="bearer"
+            )
+        )
+        
         logger.info(f"User registered successfully: {user.email}")
         return APIResponse(
             status="success",
-            data=user,
+            data=response_data,
             message="User registered successfully"
         )
     except HTTPException as e:
@@ -42,7 +71,7 @@ async def register_user(
     except IntegrityError as e:
         logger.error(f"Database integrity error: {str(e)}")
         return APIResponse(
-            status="error",
+            status="error", 
             data=None,
             message="User with this email or phone already exists"
         )
@@ -50,7 +79,7 @@ async def register_user(
         logger.exception(f"Unexpected error during registration: {str(e)}")
         return APIResponse(
             status="error",
-            data=None,
+            data=None, 
             message="Internal server error occurred"
         )
 
