@@ -11,7 +11,7 @@ from app.schemas.user import UserCreate, UserUpdate, UserResponse, Token, UserWi
 from app.core.auth import get_current_user, create_access_token
 from app.models.user import User
 from app.core.config import settings
-from app.core.logging import logger
+from app.core.logging_config import logger
 from app.schemas.common import APIResponse
 
 router = APIRouter()

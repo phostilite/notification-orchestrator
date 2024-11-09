@@ -32,6 +32,9 @@ class Settings(BaseSettings):
     EMAILS_FROM_EMAIL: str
     EMAILS_FROM_NAME: str
 
+    LOG_LEVEL: str = "INFO"
+    LOG_FORMAT: str = "json"
+
     class Config:
         case_sensitive = True
         env_file = ".env"

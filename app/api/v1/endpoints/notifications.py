@@ -7,13 +7,15 @@ from app.models.user import User
 from app.models.notification import Notification
 from app.models.template import NotificationTemplate
 from app.core.auth import get_current_user, require_admin
-from app.core.logging import logger
+from app.core.logging_config import logger
 from datetime import datetime
 import pytz
 from app.schemas.common import APIResponse
 from uuid import UUID
 from fastapi import Path
 from typing import List, Optional
+from app.models.user_preference import UserPreference
+from app.core.exceptions import InvalidScheduleError
 
 router = APIRouter()
 
@@ -25,39 +27,89 @@ async def create_notification(
     current_user: User = Depends(require_admin)
 ):
     """Create a new notification. Only admins can create notifications."""
+    log = logger.bind(
+        user_id=str(current_user.id),
+        template_id=str(notification.template_id)
+    )
+    log.info("creating_notification")
+
     try:
+        # Validate template
         template = db.query(NotificationTemplate).filter(
             NotificationTemplate.id == notification.template_id
         ).first()
         if not template:
+            log.error("template_not_found")
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Template not found"
             )
 
+        # Validate target user
         target_user = db.query(User).filter(User.id == notification.user_id).first()
         if not target_user:
+            log.error("target_user_not_found")
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Target user not found"
+            )
+
+        # Check user's notification preferences
+        user_preferences = db.query(UserPreference).filter(
+            UserPreference.user_id == notification.user_id,
+            UserPreference.channel == notification.channel
+        ).first()
+
+        if user_preferences and not user_preferences.enabled:
+            log.warning("notification_channel_disabled_for_user",
+                channel=notification.channel
+            )
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"User has disabled {notification.channel} notifications"
             )
 
         # Get user's timezone, fallback to UTC
         user_timezone = target_user.default_timezone or "UTC"
         user_tz = pytz.timezone(user_timezone)
 
-        # Convert scheduled_for to UTC for storage
-        if notification.scheduled_for:
-            # If datetime has timezone info, convert to UTC
-            if notification.scheduled_for.tzinfo is not None:
-                scheduled_for_utc = notification.scheduled_for.astimezone(pytz.UTC)
+        # Validate and convert scheduled_for time
+        try:
+            if notification.scheduled_for:
+                if notification.scheduled_for.tzinfo is not None:
+                    scheduled_for_utc = notification.scheduled_for.astimezone(pytz.UTC)
+                else:
+                    local_dt = user_tz.localize(notification.scheduled_for)
+                    scheduled_for_utc = local_dt.astimezone(pytz.UTC)
+
+                # Check if scheduled time is in the past
+                if scheduled_for_utc < datetime.now(pytz.UTC):
+                    raise InvalidScheduleError("Cannot schedule notifications in the past")
             else:
-                # If naive datetime, assume it's in user's timezone and convert to UTC
-                local_dt = user_tz.localize(notification.scheduled_for)
-                scheduled_for_utc = local_dt.astimezone(pytz.UTC)
-        else:
-            # Use current time in UTC
-            scheduled_for_utc = datetime.now(pytz.UTC)
+                scheduled_for_utc = datetime.now(pytz.UTC)
+
+        except pytz.exceptions.PytzError as e:
+            log.error("timezone_error", error=str(e))
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid timezone configuration"
+            )
+        except InvalidScheduleError as e:
+            log.error("invalid_schedule", error=str(e))
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=str(e)
+            )
+
+        # Render template content
+        try:
+            rendered_content = template.render(notification.variables)
+        except Exception as e:
+            log.error("template_render_error", error=str(e))
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Template rendering error: {str(e)}"
+            )
 
         # Create notification
         db_notification = Notification(
@@ -68,13 +120,18 @@ async def create_notification(
             priority=notification.priority,
             scheduled_for=scheduled_for_utc,
             timezone=user_timezone,
-            content=template.render(notification.variables),
+            content=rendered_content,
             status="pending"
         )
         
         db.add(db_notification)
         db.commit()
         db.refresh(db_notification)
+
+        log.info("notification_created_successfully",
+            notification_id=str(db_notification.id),
+            scheduled_for=str(scheduled_for_utc)
+        )
 
         # Convert scheduled_for back to user's timezone for response
         response_notification = db_notification.__dict__.copy()
@@ -89,7 +146,7 @@ async def create_notification(
     except HTTPException as e:
         raise e
     except Exception as e:
-        logger.error(f"Error creating notification: {str(e)}")
+        log.error("error_creating_notification", error=str(e))
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Error creating notification"

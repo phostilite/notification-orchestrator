@@ -12,7 +12,7 @@ from app.schemas.template import (
 from app.core.auth import get_current_user, require_admin
 from app.models.user import User
 from app.schemas.common import APIResponse
-from app.core.logging import logger
+from app.core.logging_config import logger
 import re
 from uuid import UUID
 

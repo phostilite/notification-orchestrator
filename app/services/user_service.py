@@ -5,7 +5,7 @@ from app.models.user import User
 from app.schemas.user import UserCreate, UserUpdate
 from app.models.user_preference import UserPreference
 from app.core.auth import get_password_hash, verify_password
-from app.core.logging import logger
+from app.core.logging_config import logger
 
 class UserService:
     @staticmethod

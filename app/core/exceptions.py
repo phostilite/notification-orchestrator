@@ -1,16 +1,21 @@
 # app/core/exceptions.py
+from typing import Any, Dict
+
 class NotificationError(Exception):
-    """Base exception for notification related errors"""
+    """Base exception for notification-related errors"""
+    def __init__(self, message: str, details: Dict[str, Any] = None):
+        self.message = message
+        self.details = details or {}
+        super().__init__(self.message)
+
+class TemplateRenderError(NotificationError):
+    """Raised when template rendering fails"""
     pass
 
-class TemplateNotFoundError(NotificationError):
-    """Raised when a notification template is not found"""
+class DeliveryError(NotificationError):
+    """Raised when notification delivery fails"""
     pass
 
-class UserNotFoundError(NotificationError):
-    """Raised when a user is not found"""
-    pass
-
-class InvalidChannelError(NotificationError):
-    """Raised when an invalid notification channel is specified"""
+class InvalidScheduleError(NotificationError):
+    """Raised when notification scheduling is invalid"""
     pass

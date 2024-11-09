@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.db.session import get_db
 from app.models.user import User
-from app.core.logging import logger
+from app.core.logging_config import logger
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
