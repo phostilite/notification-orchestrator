@@ -28,7 +28,7 @@ We take security vulnerabilities seriously. If you discover a security issue, pl
 1. **DO NOT** disclose the vulnerability publicly
 2. Report the issue through one of these channels:
    - Create a private security advisory on GitHub
-   - Send a detailed report via email to priyanshu@example.com
+   - Send a detailed report via email to ps4798214@gmail.com
 3. Include in your report:
    - Description of the vulnerability
    - Steps to reproduce
