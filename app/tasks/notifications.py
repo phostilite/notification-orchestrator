@@ -1,22 +1,23 @@
 # app/tasks/notifications.py
 from celery import Task
 from celery.exceptions import MaxRetriesExceededError
-from datetime import datetime, timedelta
+from datetime import datetime
 import pytz
-from app.core.celery import celery_app
 from app.db.session import SessionLocal
-from app.models.notification import Notification
-from app.models.delivery_status import DeliveryStatus
+from app.schemas.notification import NotificationStatus
+from app.models import Notification, DeliveryStatus
 from app.services.senders.factory import NotificationSenderFactory
+from app.core.celery import celery_app
+from app.core.exceptions import DeliveryError
 from app.core.logging_config import logger
-from app.core.exceptions import NotificationError, DeliveryError
 
+# app/tasks/notifications.py
 class BaseNotificationTask(Task):
-    autoretry_for = (Exception,)
+    abstract = True
     max_retries = 3
-    retry_backoff = True
-    retry_backoff_max = 600  # Maximum delay between retries (10 minutes)
-    retry_jitter = True     # Add randomness to retry delays
+    autoretry_for = (DeliveryError,)
+    retry_backoff = False  # Disable exponential backoff
+    retry_jitter = False   # Disable jitter
 
     def on_failure(self, exc, task_id, args, kwargs, einfo):
         with SessionLocal() as db:
@@ -24,97 +25,105 @@ class BaseNotificationTask(Task):
             notification = db.query(Notification).filter(Notification.id == notification_id).first()
             
             if notification:
-                # Create delivery status record
                 delivery_status = DeliveryStatus(
                     notification_id=notification_id,
+                    attempt_number=notification.retry_count + 1,
                     status="failed",
                     error_message=str(exc),
-                    attempt_number=notification.retry_count + 1,
-                    metadata={
-                        "task_id": task_id,
-                        "error_type": type(exc).__name__,
-                        "traceback": str(einfo)
-                    }
+                    error_code=getattr(exc, 'error_code', None),
+                    provider_response=getattr(exc, 'details', {})
                 )
                 db.add(delivery_status)
-
-                # Update notification status
-                notification.status = "failed"
-                notification.error_message = str(exc)
+                
                 notification.retry_count += 1
+                notification.error_message = str(exc)
                 
-                if isinstance(exc, MaxRetriesExceededError):
-                    notification.status = "failed_permanent"
-                    logger.error("notification_max_retries_exceeded", 
-                        notification_id=notification_id,
-                        error=str(exc),
-                        retry_count=notification.retry_count
-                    )
-                
+                if isinstance(exc, MaxRetriesExceededError) or notification.retry_count >= self.max_retries:
+                    notification.status = NotificationStatus.FAILED_PERMANENT
+                else:
+                    notification.status = NotificationStatus.FAILED
+                    # Retry with fixed 10 second delay
+                    self.retry(exc=exc, countdown=10)
+                    
                 db.commit()
                 
         logger.error("notification_task_failed",
             notification_id=notification_id,
-            task_id=task_id,
             error=str(exc),
             traceback=str(einfo)
         )
-        
-        super().on_failure(exc, task_id, args, kwargs, einfo)
 
 @celery_app.task(base=BaseNotificationTask, name="send_notification")
 def send_notification(notification_id: str):
-    log = logger.bind(notification_id=notification_id)
-    log.info("starting_notification_delivery")
+    """Send a single notification"""
+    log = logger.bind(task="send_notification", notification_id=notification_id)
     
     with SessionLocal() as db:
-        notification = db.query(Notification).filter(Notification.id == notification_id).first()
-        if not notification:
-            log.error("notification_not_found")
-            return
-
         try:
-            # Create delivery status record for attempt
+            notification = (db.query(Notification)
+                          .filter(Notification.id == notification_id)
+                          .with_for_update(skip_locked=True)
+                          .first())
+
+            if not notification or notification.status in [
+                NotificationStatus.SENT,
+                NotificationStatus.FAILED_PERMANENT
+            ]:
+                return False
+
+            notification.status = NotificationStatus.PROCESSING
+            db.commit()
+
             delivery_status = DeliveryStatus(
                 notification_id=notification_id,
-                status="processing",
-                attempt_number=notification.retry_count + 1
+                attempt_number=notification.retry_count + 1,
+                status="processing"
             )
             db.add(delivery_status)
             db.commit()
 
-            sender = NotificationSenderFactory.get_sender(notification.channel)
-            result = sender.send(notification)
+            try:
+                sender = NotificationSenderFactory.get_sender(notification.channel)
+                result = sender.send(notification)
 
-            if result.success:
-                notification.status = "sent"
-                notification.sent_at = datetime.now(pytz.UTC)
-                delivery_status.status = "delivered"
-                delivery_status.sent_at = notification.sent_at
-                log.info("notification_delivered_successfully")
-            else:
-                raise DeliveryError(
-                    message=result.error_message,
-                    details={
-                        "error_code": result.error_code,
-                        "channel": notification.channel
-                    }
-                )
+                if result.success:
+                    notification.status = NotificationStatus.SENT
+                    notification.sent_at = datetime.now(pytz.UTC)
+                    delivery_status.status = "delivered"
+                    delivery_status.delivered_at = notification.sent_at
+                    delivery_status.provider_response = result.response
+                    log.info("notification_delivered_successfully")
+                else:
+                    raise DeliveryError(
+                        message=result.error_message,
+                        details={
+                            "error_code": result.error_code,
+                            "channel": notification.channel,
+                            "provider_response": result.response
+                        }
+                    )
 
-            db.commit()
-            return result.success
+            except Exception as e:
+                notification.retry_count += 1
+                delivery_status.status = "failed"
+                delivery_status.error_message = str(e)
+                
+                if isinstance(e, MaxRetriesExceededError) or notification.retry_count >= notification.max_retries:
+                    notification.status = NotificationStatus.FAILED_PERMANENT
+                else:
+                    notification.status = NotificationStatus.FAILED
+                    
+                raise
+
+            finally:
+                db.commit()
 
         except Exception as e:
             db.rollback()
-            notification.retry_count += 1
-            delivery_status.status = "failed"
-            delivery_status.error_message = str(e)
-            db.commit()
-
             log.error("notification_delivery_failed",
                 error=str(e),
-                retry_count=notification.retry_count,
-                channel=notification.channel
+                retry_count=notification.retry_count if notification else 0,
+                channel=notification.channel if notification else None
             )
             raise
 
@@ -128,12 +137,17 @@ def schedule_pending_notifications():
         now = datetime.now(pytz.UTC)
         
         try:
-            # Get pending notifications that are due and haven't exceeded retry limit
-            pending_notifications = db.query(Notification).filter(
-                Notification.status == "pending",
-                Notification.scheduled_for <= now,
-                Notification.retry_count < Notification.max_retries
-            ).all()
+            pending_notifications = (
+                db.query(Notification)
+                .filter(
+                    Notification.status == NotificationStatus.PENDING,
+                    Notification.scheduled_for <= now,
+                    Notification.retry_count < Notification.max_retries
+                )
+                .with_for_update(skip_locked=True)
+                .limit(100)  # Process in batches
+                .all()
+            )
 
             scheduled_count = 0
             for notification in pending_notifications:
@@ -144,16 +158,19 @@ def schedule_pending_notifications():
                     )
                     scheduled_count += 1
                 except Exception as e:
-                    log.error("error_scheduling_notification",
-                        notification_id=str(notification.id),
+                    log.error("notification_scheduling_failed",
+                        notification_id=notification.id,
                         error=str(e)
                     )
 
             log.info("notifications_scheduled",
-                total_pending=len(pending_notifications),
-                scheduled_count=scheduled_count
+                count=scheduled_count,
+                total_pending=len(pending_notifications)
             )
 
         except Exception as e:
-            log.error("error_processing_pending_notifications", error=str(e))
+            db.rollback()
+            log.error("notification_scheduling_failed",
+                error=str(e)
+            )
             raise

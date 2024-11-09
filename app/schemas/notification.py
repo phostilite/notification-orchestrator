@@ -55,3 +55,23 @@ class NotificationChannel(str, Enum):
 
     def __str__(self):
         return self.value
+    
+class NotificationStatus(str, Enum):
+    PENDING = "pending"
+    PROCESSING = "processing" 
+    SENT = "sent"
+    FAILED = "failed"
+    FAILED_PERMANENT = "failed_permanent"
+
+class DeliveryStatusResponse(BaseModel):
+    notification_id: UUID
+    attempt_number: int
+    status: str
+    provider_response: Optional[Dict[str, Any]]
+    error_code: Optional[str]
+    error_message: Optional[str]
+    delivered_at: Optional[datetime]
+    created_at: datetime
+
+    class Config:
+        orm_mode = True
