@@ -1,39 +1,46 @@
 # app/schemas/notification.py
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any
 from datetime import datetime
-from pydantic import BaseModel, UUID4, Field
-from .base import BaseSchema
+from uuid import UUID
+from pydantic import BaseModel, Field
 from enum import Enum
 
-class NotificationBase(BaseSchema):
+class NotificationBase(BaseModel):
     channel: str = Field(..., description="Notification channel (email, sms, push)")
-    template_id: UUID4
     variables: Dict[str, Any] = Field(default_factory=dict)
     priority: int = Field(default=1, ge=1, le=5)
     scheduled_for: Optional[datetime] = None
-    timezone: str = Field(default="UTC", description="Timezone for scheduling (e.g. 'America/New_York')")
 
 class NotificationCreate(NotificationBase):
-    user_id: UUID4
+    user_id: UUID
+    template_id: UUID
 
 class NotificationUpdate(BaseModel):
-    status: Optional[str] = None
+    template_id: Optional[UUID] = None
+    channel: Optional[str] = None
+    variables: Optional[Dict[str, Any]] = None
+    priority: Optional[int] = Field(None, ge=1, le=5)
+    scheduled_for: Optional[datetime] = None
 
 class NotificationResponse(NotificationBase):
-    id: UUID4
-    user_id: UUID4
+    id: UUID
+    user_id: UUID
+    template_id: UUID
     status: str
     content: str
+    scheduled_for: datetime
+    sent_at: Optional[datetime] = None
+    error_message: Optional[str] = None
+    retry_count: int
     created_at: datetime
-    sent_at: Optional[datetime]
-    timezone: str
-    error_message: Optional[str]
+    updated_at: datetime
 
-class NotificationList(BaseModel):
-    items: List[NotificationResponse]
-    total: int
-    skip: int
-    limit: int
+    class Config:
+        orm_mode = True
+
+class NotificationDetails(NotificationResponse):
+    notification_metadata: Optional[Dict[str, Any]] = None
+    timezone: Optional[str] = None
 
 class NotificationChannel(str, Enum):
     """Supported notification channels"""
