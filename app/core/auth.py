@@ -1,15 +1,23 @@
+# app/core/auth.py
+
+# Standard library imports
 from datetime import datetime, timedelta, timezone
 from typing import Optional
+
+# Third-party imports
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
+
+# Local application imports
 from app.core.config import settings
+from app.core.logging_config import logger
 from app.db.session import get_db
 from app.models.user import User
-from app.core.logging_config import logger
 
+# Authentication configuration
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 

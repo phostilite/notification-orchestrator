@@ -1,6 +1,10 @@
 # app/models/user.py
-from sqlalchemy import Column, String, Boolean
+
+# Third-party imports
+from sqlalchemy import Boolean, Column, String
 from sqlalchemy.orm import relationship
+
+# Local application imports
 from .base import Base
 
 class User(Base):

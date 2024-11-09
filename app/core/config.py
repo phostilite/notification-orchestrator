@@ -1,3 +1,6 @@
+# app/core/config.py
+
+# Third-party imports
 from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):

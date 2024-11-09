@@ -18,6 +18,7 @@ click==8.1.7
 click-didyoumean==0.3.1
 click-plugins==1.1.1
 click-repl==0.3.0
+coverage==7.6.4
 cryptography==43.0.3
 dnspython==2.7.0
 ecdsa==0.19.0
@@ -26,14 +27,17 @@ fastapi==0.115.4
 frozenlist==1.5.0
 greenlet==3.1.1
 h11==0.14.0
+httpcore==1.0.6
+httpx==0.27.2
 idna==3.10
 iniconfig==2.0.0
+Jinja2==3.1.4
 kombu==5.4.2
 loguru==0.7.2
 Mako==1.3.6
 MarkupSafe==3.0.2
 multidict==6.1.0
--e git+ssh://git@github.com/phostilite/notification-orchestrator.git@d0a1bc32dea34fc16dac0cb74e6f94e3629c0811#egg=notification_service
+-e git+ssh://git@github.com/phostilite/notification-orchestrator.git@3a5427d47c07a44b262c1fa0cf046831cb667e0d#egg=notification_service
 packaging==24.1
 passlib==1.7.4
 pluggy==1.5.0
@@ -47,6 +51,7 @@ pydantic-settings==2.6.1
 pydantic_core==2.23.4
 PyJWT==2.9.0
 pytest==8.3.3
+pytest-cov==6.0.0
 python-dateutil==2.9.0.post0
 python-dotenv==1.0.1
 python-jose==3.3.0
@@ -61,6 +66,7 @@ six==1.16.0
 sniffio==1.3.1
 SQLAlchemy==2.0.36
 starlette==0.41.2
+structlog==24.4.0
 twilio==9.3.6
 typing_extensions==4.12.2
 tzdata==2024.2

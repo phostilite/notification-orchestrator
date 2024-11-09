@@ -1,21 +1,29 @@
 # app/api/v1/endpoints/templates.py
-from typing import List
-from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy.orm import Session
-from app.db.session import get_db
-from app.services.template_service import TemplateService
-from app.schemas.template import (
-    TemplateCreate, 
-    TemplateUpdate,
-    TemplateResponse,
-)
-from app.core.auth import get_current_user, require_admin
-from app.models.user import User
-from app.schemas.common import APIResponse
-from app.core.logging_config import logger
+
+# Standard library imports
 import re
+from typing import List
 from uuid import UUID
 
+# Third-party imports
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy.orm import Session
+
+# Local application imports
+from app.core.auth import get_current_user, require_admin
+from app.core.logging_config import logger
+from app.db.session import get_db
+from app.models.template import NotificationTemplate
+from app.models.user import User
+from app.schemas.common import APIResponse
+from app.schemas.template import (
+    TemplateCreate,
+    TemplateResponse,
+    TemplateUpdate
+)
+from app.services.template_service import TemplateService
+
+# Router initialization
 router = APIRouter()
 
 NAME_PATTERN = re.compile(r'^[a-zA-Z0-9_-]+$')
@@ -92,6 +100,53 @@ async def create_template(
             status="error",
             data=None,
             message="Error occurred while creating template"
+        )
+    
+from fastapi import HTTPException
+
+@router.get("/{template_id}", response_model=APIResponse[TemplateResponse])
+async def get_template(
+    *,
+    db: Session = Depends(get_db),
+    template_id: str,
+):
+    """Get a notification template by ID."""
+    try:
+        # Validate template_id format
+        try:
+            UUID(template_id)
+        except ValueError:
+            return APIResponse(
+                status="error",
+                data=None,
+                message="Invalid template ID format. Must be a valid UUID"
+            )
+
+        # Query template
+        template = db.query(NotificationTemplate).filter(
+            NotificationTemplate.id == template_id
+        ).first()
+
+        if not template:
+            raise HTTPException(
+                status_code=404,
+                detail="Template not found"
+            )
+
+        return APIResponse(
+            status="success",
+            data=template,
+            message="Template retrieved successfully"
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error retrieving template: {str(e)}")
+        return APIResponse(
+            status="error",
+            data=None, 
+            message="Error occurred while retrieving template"
         )
 
 @router.put("/{template_id}", response_model=APIResponse[TemplateResponse])

@@ -1,7 +1,14 @@
 # app/schemas/user.py
-from typing import Optional, List
-from pydantic import BaseModel, EmailStr, UUID4, Field
+
+# Standard library imports
 from datetime import datetime
+from typing import List, Optional
+
+# Third-party imports
+import pytz
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, UUID4, validator
+
+# Local application imports
 from app.schemas.base import BaseSchema
 from app.schemas.preference import PreferenceResponse, PreferenceUpdate
 
@@ -24,7 +31,20 @@ class UserUpdate(BaseModel):
     default_timezone: Optional[str] = None
     preferences: Optional[List[PreferenceUpdate]] = None
 
+    @validator('default_timezone')
+    def validate_timezone(cls, v):
+        if v is not None:
+            try:
+                if v not in pytz.all_timezones:
+                    raise ValueError("Invalid timezone")
+                return v
+            except Exception:
+                raise ValueError("Invalid timezone. Please provide a valid timezone like 'Asia/Kolkata' or 'America/New_York'")
+        return v
+
 class UserResponse(UserBase):
+    model_config = ConfigDict(from_attributes=True)
+
     id: UUID4
     is_verified: bool
     preferences: List[PreferenceResponse]

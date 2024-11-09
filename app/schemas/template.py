@@ -1,7 +1,13 @@
 # app/schemas/template.py
-from typing import Optional, Dict, Any
-from pydantic import BaseModel, UUID4, Field
+
+# Standard library imports
 from datetime import datetime
+from typing import Any, Dict, Optional
+
+# Third-party imports
+from pydantic import BaseModel, Field, UUID4
+
+# Local application imports
 from .base import BaseSchema
 
 class TemplateBase(BaseSchema):

@@ -1,23 +1,35 @@
-# Modified app/api/v1/endpoints/notifications.py
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+# app/api/v1/endpoints/notifications.py
+
+# Standard library imports
+from datetime import datetime
+from typing import List, Optional
+from uuid import UUID
+
+# Third-party imports
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
+import pytz
 from sqlalchemy.orm import Session
+
+# Local application imports
+from app.core.auth import get_current_user, require_admin
+from app.core.exceptions import InvalidScheduleError
+from app.core.logging_config import logger
 from app.db.session import get_db
-from app.schemas.notification import NotificationCreate, NotificationResponse, NotificationDetails, NotificationUpdate, DeliveryStatusResponse
-from app.models.user import User
+from app.models.delivery_status import DeliveryStatus
 from app.models.notification import Notification
 from app.models.template import NotificationTemplate
-from app.models.delivery_status import DeliveryStatus
-from app.core.auth import get_current_user, require_admin
-from app.core.logging_config import logger
-from datetime import datetime
-import pytz
-from app.schemas.common import APIResponse
-from uuid import UUID
-from fastapi import Path
-from typing import List, Optional
+from app.models.user import User
 from app.models.user_preference import UserPreference
-from app.core.exceptions import InvalidScheduleError
+from app.schemas.common import APIResponse
+from app.schemas.notification import (
+    DeliveryStatusResponse,
+    NotificationCreate,
+    NotificationDetails,
+    NotificationResponse,
+    NotificationUpdate,
+)
 
+# Router initialization
 router = APIRouter()
 
 @router.post("/", response_model=APIResponse[NotificationResponse], status_code=status.HTTP_201_CREATED)

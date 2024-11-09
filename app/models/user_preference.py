@@ -1,7 +1,11 @@
 # app/models/user_preference.py
-from sqlalchemy import Column, String, Boolean, ForeignKey, Time, Integer, UniqueConstraint
-from sqlalchemy.orm import relationship
+
+# Third-party imports
+from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, Time, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import relationship
+
+# Local application imports
 from .base import Base
 
 class UserPreference(Base):

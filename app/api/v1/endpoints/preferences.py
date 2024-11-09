@@ -1,13 +1,26 @@
+# app/api/v1/endpoints/preferences.py
+
+# Standard library imports
 from typing import List
+
+# Third-party imports
 from fastapi import APIRouter, Depends, status
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
-from app.db.session import get_db
-from app.services.preference_service import PreferenceService
-from app.schemas.preference import PreferenceCreate, PreferenceUpdate, PreferenceResponse
+
+# Local application imports
 from app.core.auth import get_current_user
+from app.db.session import get_db
 from app.models.user import User
 from app.schemas.common import APIResponse
+from app.schemas.preference import (
+    PreferenceCreate, 
+    PreferenceResponse,
+    PreferenceUpdate
+)
+from app.services.preference_service import PreferenceService
 
+# Router initialization
 router = APIRouter()
 
 @router.post("/", response_model=APIResponse[PreferenceResponse], status_code=status.HTTP_201_CREATED)
@@ -27,10 +40,13 @@ async def create_preference(
         )
         
         if existing:
-            return APIResponse(
-                status="error",
-                data=None,
-                message=f"Preference already exists for channel {preference.channel}"
+            return JSONResponse(
+                status_code=status.HTTP_409_CONFLICT,
+                content={
+                    "status": "error",
+                    "data": None,
+                    "message": f"Preference already exists for channel {preference.channel}"
+                }
             )
 
         new_preference = await PreferenceService.create_preference(
@@ -46,16 +62,22 @@ async def create_preference(
         )
         
     except ValueError as e:
-        return APIResponse(
-            status="error",
-            data=None,
-            message=str(e)
+        return JSONResponse(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            content={
+                "status": "error",
+                "data": None,
+                "message": str(e)
+            }
         )
     except Exception as e:
-        return APIResponse(
-            status="error",
-            data=None,
-            message="Internal server error"
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={
+                "status": "error",
+                "data": None,
+                "message": "Internal server error"
+            }
         )
 
 @router.get("/", response_model=APIResponse[List[PreferenceResponse]])

@@ -1,9 +1,13 @@
 # app/models/base.py
+
+# Standard library imports
 from datetime import datetime, timezone
 from typing import Any
-from sqlalchemy.ext.declarative import declared_attr, declarative_base
-from sqlalchemy import Column, DateTime, Boolean, UUID
 import uuid
+
+# Third-party imports
+from sqlalchemy import Boolean, Column, DateTime, UUID
+from sqlalchemy.ext.declarative import declared_attr, declarative_base
 
 class CustomBase:
     """

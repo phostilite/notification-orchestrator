@@ -1,13 +1,35 @@
-from typing import Dict, Any
-import aiosmtplib
-from email.mime.text import MIMEText
+# app/services/senders/email_sender.py
+
+# Standard library imports
 from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+import smtplib
+from typing import Dict, Any
+
+# Third-party imports
+import aiosmtplib
+
+# Local application imports
 from app.core.config import settings
 from .base import NotificationSender, SendResult
 
-# app/services/senders/email_sender.py
+
 class EmailSender(NotificationSender):
-    def send(self, notification) -> SendResult:  # Remove async
+    """
+    Email notification sender implementation using SMTP.
+    Handles email composition and sending via SMTP server.
+    """
+
+    def send(self, notification) -> SendResult:
+        """
+        Send an email notification.
+
+        Args:
+            notification: Notification object containing template, user and content
+
+        Returns:
+            SendResult: Result of the email sending operation
+        """
         try:
             message = MIMEMultipart('alternative')
             message['Subject'] = notification.template.name
@@ -17,8 +39,6 @@ class EmailSender(NotificationSender):
             html_content = MIMEText(notification.content, 'html')
             message.attach(html_content)
 
-            # Use synchronous SMTP instead of aiosmtplib
-            import smtplib
             with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT) as server:
                 server.starttls()
                 server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
@@ -34,4 +54,3 @@ class EmailSender(NotificationSender):
                 error_code="SMTP_ERROR",
                 error_message=str(e)
             )
-

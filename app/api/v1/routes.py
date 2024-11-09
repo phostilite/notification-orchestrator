@@ -1,9 +1,20 @@
 # app/api/v1/routes.py
-from fastapi import APIRouter
-from app.api.v1.endpoints import notifications, templates, preferences, users
 
+# Third-party imports
+from fastapi import APIRouter
+
+# Local application imports
+from app.api.v1.endpoints import (
+    notifications,
+    preferences,
+    templates,
+    users
+)
+
+# Main API router
 api_router = APIRouter()
 
+# Include sub-routers
 api_router.include_router(
     users.router,
     prefix="/users",

@@ -1,8 +1,12 @@
 # app/models/template.py
-from sqlalchemy import Column, String, Integer, Text, JSON, UniqueConstraint
-from sqlalchemy.orm import relationship
-from .base import Base
+
+# Third-party imports
 import jinja2
+from sqlalchemy import Column, Integer, JSON, String, Text, UniqueConstraint
+from sqlalchemy.orm import relationship
+
+# Local application imports
+from .base import Base
 
 class NotificationTemplate(Base):
     """Template model for notification content"""

@@ -1,11 +1,19 @@
+# app/main.py
+
+# Standard library imports
+from contextlib import asynccontextmanager
+import json
+
+# Third-party imports
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
-from app.core.config import settings
-from app.api.v1.routes import api_router
 from fastapi.responses import JSONResponse
-from contextlib import asynccontextmanager
-import json
+
+# Local application imports
+from app.api.v1.routes import api_router
+from app.core.config import settings
+
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -27,6 +35,7 @@ app.include_router(api_router, prefix=settings.API_V1_STR)
 
 # Custom OpenAPI documentation
 def custom_openapi():
+    """Generate custom OpenAPI schema for API documentation."""
     if app.openapi_schema:
         return app.openapi_schema
     
@@ -45,8 +54,9 @@ app.openapi = custom_openapi
 # Root endpoint
 @app.get("/")
 async def root():
+    """Root endpoint returning API information."""
     return {
         "message": "Welcome to Notification Service API",
-        "docs": "/docs",  # Changed from f"{settings.API_V1_STR}/docs"
+        "docs": "/docs",
         "version": settings.VERSION
     }

@@ -1,15 +1,34 @@
 # app/services/senders/push_sender.py
+
+# Standard library imports
 from typing import Dict, Any
+
+# Third-party imports 
 import aiohttp
+import requests
+
+# Local application imports
 from app.core.config import settings
 from .base import NotificationSender, SendResult
 
-# app/services/senders/push_sender.py
+
 class PushSender(NotificationSender):
-    def send(self, notification) -> SendResult:  # Remove async
+    """
+    Push notification sender implementation.
+    Handles sending push notifications via external provider API.
+    """
+
+    def send(self, notification) -> SendResult:
+        """
+        Send a push notification.
+
+        Args:
+            notification: Notification object containing user_id, template and content
+
+        Returns:
+            SendResult: Result of the push notification sending operation
+        """
         try:
-            import requests  # Use requests instead of aiohttp
-            
             response = requests.post(
                 settings.PUSH_PROVIDER_URL,
                 headers={

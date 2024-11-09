@@ -1,8 +1,12 @@
 # app/core/logging_config.py
-import logging
-import json
+
+# Standard library imports
 from datetime import datetime
+import json
+import logging
 from typing import Any, Dict
+
+# Third-party imports
 import structlog
 
 # Configure structlog

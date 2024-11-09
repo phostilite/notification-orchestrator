@@ -1,20 +1,36 @@
 # app/api/v1/endpoints/users.py
-from typing import Dict
+
+# Standard library imports
 from datetime import timedelta
+from typing import Dict, Optional
+
+# Third-party imports
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
-from app.db.session import get_db
-from app.services.user_service import UserService
-from app.schemas.user import UserCreate, UserUpdate, UserResponse, Token, UserWithToken
-from app.core.auth import get_current_user, create_access_token
-from app.models.user import User
+
+# Local application imports
+from app.core.auth import create_access_token, get_current_user
 from app.core.config import settings
 from app.core.logging_config import logger
+from app.db.session import get_db
+from app.models.user import User
 from app.schemas.common import APIResponse
+from app.schemas.user import (
+    Token,
+    UserCreate,
+    UserResponse,
+    UserUpdate,
+    UserWithToken
+)
+from app.services.user_service import UserService
 
+# Router initialization
 router = APIRouter()
+
+# app/api/v1/endpoints/users.py
+from fastapi.responses import JSONResponse
 
 @router.post("/register", response_model=APIResponse[UserWithToken], status_code=status.HTTP_201_CREATED)
 async def register_user(
@@ -24,29 +40,32 @@ async def register_user(
 ):
     """Register a new user"""
     try:
+        # Validate unique fields first
         await UserService.validate_unique_fields(db=db, email=user_in.email, phone=user_in.phone)
+        
+        # Create user if validation passes
         user = await UserService.create_user(db=db, user_create=user_in)
         
-        # Generate access token for the new user
+        # Generate token
         access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
         access_token = create_access_token(
             data={"sub": str(user.id)},
             expires_delta=access_token_expires
         )
 
-        # Convert SQLAlchemy model to Pydantic model
+        # Create response with proper model validation
         user_response = UserResponse(
             id=user.id,
             email=user.email,
             phone=user.phone,
             full_name=user.full_name,
             is_verified=user.is_verified,
-            preferences=user.preferences,
+            is_admin=user.is_admin,
+            preferences=[],
             created_at=user.created_at,
             updated_at=user.updated_at
         )
         
-        # Create response with user and token
         response_data = UserWithToken(
             user=user_response,
             token=Token(
@@ -55,32 +74,41 @@ async def register_user(
             )
         )
         
-        logger.info(f"User registered successfully: {user.email}")
         return APIResponse(
             status="success",
             data=response_data,
             message="User registered successfully"
         )
+
     except HTTPException as e:
-        logger.warning(f"Registration validation failed: {str(e)}")
-        return APIResponse(
-            status="error",
-            data=None,
-            message=str(e.detail)
+        return JSONResponse(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            content=APIResponse(
+                status="error",
+                data=None,
+                message=str(e.detail)
+            ).model_dump()
         )
+        
     except IntegrityError as e:
-        logger.error(f"Database integrity error: {str(e)}")
-        return APIResponse(
-            status="error", 
-            data=None,
-            message="User with this email or phone already exists"
+        return JSONResponse(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            content=APIResponse(
+                status="error",
+                data=None,
+                message="User with this email or phone already exists"
+            ).model_dump()
         )
+        
     except Exception as e:
         logger.exception(f"Unexpected error during registration: {str(e)}")
-        return APIResponse(
-            status="error",
-            data=None, 
-            message="Internal server error occurred"
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content=APIResponse(
+                status="error",
+                data=None,
+                message="Internal server error occurred"
+            ).model_dump()
         )
 
 @router.post("/login", response_model=APIResponse[Token])
@@ -129,23 +157,39 @@ async def login(
             message="An error occurred while processing your request"
         )
 
-@router.get("/me", response_model=APIResponse[UserResponse])
+@router.get(
+    "/me",
+    response_model=APIResponse[UserResponse],
+    responses={
+        401: {"description": "Authentication failed"},
+        500: {"description": "Internal server error"}
+    }
+)
 async def get_user_profile(
-    current_user: User = Depends(get_current_user)
-):
-    """Get current user profile"""
+    current_user: Optional[User] = Depends(get_current_user)
+) -> APIResponse[UserResponse]:
     try:
+        if not current_user:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Could not validate credentials"
+            )
+
         return APIResponse(
             status="success",
-            data=current_user,
+            data=UserResponse.from_orm(current_user),
             message="User profile retrieved successfully"
         )
+
+    except HTTPException as he:
+        logger.error(f"Authentication error: {str(he)}")
+        raise he
+    
     except Exception as e:
         logger.error(f"Error retrieving user profile: {str(e)}")
-        return APIResponse(
-            status="error",
-            data=None,
-            message="Error retrieving user profile"
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error retrieving user profile"
         )
 
 @router.put("/me", response_model=APIResponse[UserResponse])

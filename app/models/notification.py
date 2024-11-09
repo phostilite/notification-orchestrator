@@ -1,7 +1,11 @@
 # app/models/notification.py
-from sqlalchemy import Column, String, ForeignKey, JSON, Integer, DateTime, Text
-from sqlalchemy.orm import relationship
+
+# Third-party imports
+from sqlalchemy import Column, DateTime, ForeignKey, Integer, JSON, String, Text
 from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import relationship
+
+# Local application imports
 from .base import Base
 
 class Notification(Base):

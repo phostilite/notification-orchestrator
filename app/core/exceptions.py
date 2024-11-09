@@ -1,4 +1,6 @@
 # app/core/exceptions.py
+
+# Third-party imports
 from typing import Any, Dict
 
 class NotificationError(Exception):

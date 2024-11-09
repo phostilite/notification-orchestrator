@@ -1,7 +1,13 @@
 # app/schemas/preference.py
-from typing import Optional
+
+# Standard library imports
 from datetime import datetime, time
-from pydantic import BaseModel, UUID4, Field
+from typing import Optional
+
+# Third-party imports
+from pydantic import BaseModel, Field, UUID4
+
+# Local application imports
 from .base import BaseSchema
 from .notification import NotificationChannel
 

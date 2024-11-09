@@ -1,15 +1,21 @@
 # app/tasks/notifications.py
+
+# Standard library imports
+from datetime import datetime
+
+# Third-party imports
 from celery import Task
 from celery.exceptions import MaxRetriesExceededError
-from datetime import datetime
 import pytz
-from app.db.session import SessionLocal
-from app.schemas.notification import NotificationStatus
-from app.models import Notification, DeliveryStatus
-from app.services.senders.factory import NotificationSenderFactory
+
+# Local application imports
 from app.core.celery import celery_app
 from app.core.exceptions import DeliveryError
 from app.core.logging_config import logger
+from app.db.session import SessionLocal
+from app.models import Notification, DeliveryStatus
+from app.schemas.notification import NotificationStatus
+from app.services.senders.factory import NotificationSenderFactory
 
 # app/tasks/notifications.py
 class BaseNotificationTask(Task):

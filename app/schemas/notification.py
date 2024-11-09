@@ -1,9 +1,13 @@
 # app/schemas/notification.py
-from typing import Optional, Dict, Any
+
+# Standard library imports
 from datetime import datetime
-from uuid import UUID
-from pydantic import BaseModel, Field
 from enum import Enum
+from typing import Any, Dict, Optional
+from uuid import UUID
+
+# Third-party imports
+from pydantic import BaseModel, Field
 
 class NotificationBase(BaseModel):
     channel: str = Field(..., description="Notification channel (email, sms, push)")
