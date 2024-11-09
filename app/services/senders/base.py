@@ -7,10 +7,10 @@ from typing import Dict, Any, Optional
 class SendResult:
     success: bool
     response: Optional[Dict[str, Any]] = None
-    error_code: Optional[str] = None
+    error_code: Optional[str] = None 
     error_message: Optional[str] = None
 
 class NotificationSender(ABC):
     @abstractmethod
-    async def send(self, notification) -> SendResult:
+    def send(self, notification) -> SendResult:  # Remove async
         pass

@@ -6,21 +6,10 @@ from sqlalchemy import Column, DateTime, Boolean, UUID
 import uuid
 
 class CustomBase:
-    """Base class for all database models providing common functionality.
-    
-    This class serves as a foundation for SQLAlchemy models with the following features:
-    - Automatic table naming based on class name (lowercase)
-    - UUID primary key generation
-    - Created and updated timestamp tracking
-    - Soft deletion support via is_active flag
-    
-    Attributes:
-        id (UUID): Primary key, auto-generated UUID
-        created_at (DateTime): UTC timestamp of record creation
-        updated_at (DateTime): UTC timestamp of last update
-        is_active (Boolean): Soft deletion flag, defaults to True
     """
-    
+    Base class for all database models providing common functionality.
+    """
+
     @declared_attr
     def __tablename__(cls) -> str:
         return cls.__name__.lower()

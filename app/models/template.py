@@ -2,6 +2,7 @@
 from sqlalchemy import Column, String, Integer, Text, JSON, UniqueConstraint
 from sqlalchemy.orm import relationship
 from .base import Base
+import jinja2
 
 class NotificationTemplate(Base):
     """Template model for notification content"""
@@ -14,6 +15,14 @@ class NotificationTemplate(Base):
     
     # Relationships
     notifications = relationship("Notification", back_populates="template")
+
+    def render(self, variables: dict) -> str:
+        """Render template with given variables"""
+        try:
+            template = jinja2.Template(self.content)
+            return template.render(**variables)
+        except jinja2.TemplateError as e:
+            raise ValueError(f"Template rendering error: {str(e)}")
     
     # Constraints
     __table_args__ = (

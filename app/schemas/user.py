@@ -10,6 +10,7 @@ class UserBase(BaseSchema):
     phone: Optional[str] = None  
     full_name: Optional[str] = None
     is_admin: Optional[bool] = False  
+    default_timezone: str = Field(default="UTC", description="User's default timezone (e.g. 'America/New_York')")
 
 class UserCreate(UserBase):
     password: str = Field(..., min_length=8)
@@ -20,6 +21,7 @@ class UserUpdate(BaseModel):
     full_name: Optional[str] = None
     password: Optional[str] = None
     is_admin: Optional[bool] = None  
+    default_timezone: Optional[str] = None
     preferences: Optional[List[PreferenceUpdate]] = None
 
 class UserResponse(UserBase):

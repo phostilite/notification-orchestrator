@@ -44,5 +44,7 @@ setup(
         # Logging
         "loguru",
         "python-json-logger",
+
+        "pytz",
     ],
 )

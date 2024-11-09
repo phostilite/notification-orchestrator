@@ -4,13 +4,14 @@ from twilio.base.exceptions import TwilioRestException
 from app.core.config import settings
 from .base import NotificationSender, SendResult
 
+# app/services/senders/sms_sender.py
 class SMSSender(NotificationSender):
     def __init__(self):
         self.client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
 
-    async def send(self, notification) -> SendResult:
+    def send(self, notification) -> SendResult:  # Remove async
         try:
-            message = await self.client.messages.create(
+            message = self.client.messages.create(  # Remove await
                 body=notification.content,
                 from_=settings.TWILIO_FROM_NUMBER,
                 to=notification.user.phone
@@ -23,7 +24,6 @@ class SMSSender(NotificationSender):
                     "status": message.status
                 }
             )
-
         except TwilioRestException as e:
             return SendResult(
                 success=False,
@@ -37,3 +37,4 @@ class SMSSender(NotificationSender):
                 error_code="INTERNAL_ERROR",
                 error_message=str(e)
             )
+

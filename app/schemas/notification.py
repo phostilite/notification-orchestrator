@@ -11,6 +11,7 @@ class NotificationBase(BaseSchema):
     variables: Dict[str, Any] = Field(default_factory=dict)
     priority: int = Field(default=1, ge=1, le=5)
     scheduled_for: Optional[datetime] = None
+    timezone: str = Field(default="UTC", description="Timezone for scheduling (e.g. 'America/New_York')")
 
 class NotificationCreate(NotificationBase):
     user_id: UUID4
@@ -25,6 +26,7 @@ class NotificationResponse(NotificationBase):
     content: str
     created_at: datetime
     sent_at: Optional[datetime]
+    timezone: str
     error_message: Optional[str]
 
 class NotificationList(BaseModel):

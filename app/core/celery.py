@@ -1,12 +1,11 @@
-# app/core/celery_app.py
+# app/core/celery.py
 from celery import Celery
 from app.core.config import settings
 
 celery_app = Celery(
-    "notification_worker",
+    'notification_worker',
     broker=settings.REDIS_URL,
-    backend=settings.REDIS_URL,
-    include=['app.tasks']
+    backend=settings.REDIS_URL
 )
 
 celery_app.conf.update(
@@ -17,6 +16,5 @@ celery_app.conf.update(
     enable_utc=True,
     task_track_started=True,
     task_time_limit=30 * 60,  # 30 minutes
-    worker_prefetch_multiplier=1,
-    task_acks_late=True
+    broker_connection_retry_on_startup=True
 )
