@@ -149,12 +149,10 @@ alembic upgrade head
 redis-server
 
 # Start Celery worker
-celery -A celery_worker worker --
-loglevel=info
+celery -A celery_worker worker --loglevel=info
 
 # Start Celery beat
-celery -A app.core.celery beat --
-loglevel=info
+celery -A celery_worker beat --loglevel=debug
 
 # Launch application
 uvicorn app.main:app --reload
