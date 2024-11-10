@@ -228,7 +228,7 @@ uvicorn app.main:app --reload
 </tr>
 </table>
 
-📚 For detailed API documentation, please refer to our comprehensive [API Guide](./API_GUIDE.md).
+📚 For detailed API documentation, please refer to our comprehensive [API Guide](https://pulcova.notion.site/Documentation-1391d2d9c65a80228f11f31bf68bd410?pvs=4).
 
 ## 🧪 Testing
 
