@@ -40,3 +40,5 @@ class PreferenceResponse(PreferenceBase):
     user_id: UUID4
     created_at: datetime
     updated_at: datetime
+
+    model_config = {"from_attributes": True}

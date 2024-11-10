@@ -157,6 +157,8 @@ async def login(
             message="An error occurred while processing your request"
         )
 
+# app/api/v1/endpoints/users.py
+
 @router.get(
     "/me",
     response_model=APIResponse[UserResponse],
@@ -175,16 +177,15 @@ async def get_user_profile(
                 detail="Could not validate credentials"
             )
 
+        user_response = UserResponse.from_orm(current_user)
         return APIResponse(
             status="success",
-            data=UserResponse.from_orm(current_user),
+            data=user_response,
             message="User profile retrieved successfully"
         )
-
     except HTTPException as he:
         logger.error(f"Authentication error: {str(he)}")
         raise he
-    
     except Exception as e:
         logger.error(f"Error retrieving user profile: {str(e)}")
         raise HTTPException(

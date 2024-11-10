@@ -114,20 +114,30 @@ pip install -r requirements.txt
 ### 2️⃣ Environment Configuration
 ```env
 # .env file configuration
-DATABASE_URL=postgresql://user:password@localhost:5432/notification_db
-REDIS_URL=redis://localhost:6379/0
-SECRET_KEY=your-secret-key
-JWT_SECRET_KEY=your-jwt-secret-key
+POSTGRES_SERVER=localhost
+POSTGRES_USER=notification_service_user
+POSTGRES_PASSWORD=hunter2butbetter
+POSTGRES_DB=notification_service
 
-# Email Configuration
+REDIS_URL=redis://localhost:6379/0
+
+JWT_SECRET_KEY=your-jwt-secret-key-change-me
+
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
-SMTP_USERNAME=your-email@gmail.com
-SMTP_PASSWORD=your-app-password
+SMTP_USER=your-email@test.com
+SMTP_PASSWORD=app-password
+EMAILS_FROM_EMAIL=your-email@test.com
+EMAILS_FROM_NAME=Notification Service
 
-# SMS Configuration
-TWILIO_ACCOUNT_SID=your-twilio-sid
-TWILIO_AUTH_TOKEN=your-twilio-token
+TWILIO_ACCOUNT_SID=account-id
+TWILIO_AUTH_TOKEN=auth-token
+TWILIO_FROM_NUMBER=from-number
+
+SMS_PROVIDER_API_KEY=your-sms-provider-key
+
+LOG_LEVEL=INFO
+LOG_FORMAT=json
 ```
 
 ### 3️⃣ Initialize & Launch
@@ -139,7 +149,12 @@ alembic upgrade head
 redis-server
 
 # Start Celery worker
-celery -A app.core.celery worker --loglevel=info
+celery -A celery_worker worker --
+loglevel=info
+
+# Start Celery beat
+celery -A app.core.celery beat --
+loglevel=info
 
 # Launch application
 uvicorn app.main:app --reload
