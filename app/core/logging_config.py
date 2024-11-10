@@ -4,10 +4,25 @@
 from datetime import datetime
 import json
 import logging
+import os
 from typing import Any, Dict
 
 # Third-party imports
 import structlog
+
+# Create logs directory if it doesn't exist
+LOGS_DIR = "logs"
+os.makedirs(LOGS_DIR, exist_ok=True)
+
+# Configure standard logging to write to file
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(message)s',
+    handlers=[
+        logging.FileHandler(f"{LOGS_DIR}/app.log"),
+        logging.StreamHandler()  # Keep console output
+    ]
+)
 
 # Configure structlog
 structlog.configure(
